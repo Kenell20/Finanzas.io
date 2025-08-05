@@ -653,13 +653,13 @@
     <script>
         // PEGA AQUÍ TU OBJETO DE CONFIGURACIÓN DE FIREBASE
                 const firebaseConfig = {
-            apiKey: "AIzaSyD1UohuK1B7APRJjJufd6kMPfRD4zJQTWg",
-            authDomain: "finanzas2025-3f0e5.firebaseapp.com",
-            projectId: "finanzas2025-3f0e5",
-            storageBucket: "finanzas2025-3f0e5.firebasestorage.app",
-            messagingSenderId: "718202265423",
-            appId: "1:718202265423:web:f2ed415c20376febdb6f3a",
-            measurementId: "G-RFJ06KHEGT"
+                    apiKey: "AIzaSyD1UohuK1B7APRJjJufd6kMPfRD4zJQTWg",
+                    authDomain: "finanzas2025-3f0e5.firebaseapp.com",
+                    projectId: "finanzas2025-3f0e5",
+                    storageBucket: "finanzas2025-3f0e5.firebasestorage.app",
+                    messagingSenderId: "718202265423",
+                    appId: "1:718202265423:web:f2ed415c20376febdb6f3a",
+                    measurementId: "G-RFJ06KHEGT"
             };
 
         // Inicializa Firebase
@@ -810,7 +810,7 @@
 
         // --- Funciones de Carga y Actualización (ahora con Firestore) ---
 
-        // Esta función ahora usa onSnapshot para escuchar cambios en tiempo real
+        // ESTA FUNCIÓN FUE MODIFICADA PARA SOLUCIONAR EL ERROR DEL PRESUPUESTO
         function loadData() {
             if (!currentUser) return;
 
@@ -822,31 +822,67 @@
             
             currentMonthYearSpan.textContent = `${months[selectedMonth]} ${selectedYear}`;
 
-            // Escuchamos los cambios en la colección 'transactions' del usuario actual
-            // El filtro se hace del lado del cliente por simplicidad, pero lo ideal es usar un índice
+            // Primero obtenemos las transacciones para el mes seleccionado
             db.collection("users").doc(currentUser.uid).collection("transactions")
                 .orderBy("date", "desc")
-                .onSnapshot(snapshot => {
-                    const allTransactions = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                .onSnapshot(transactionsSnapshot => {
+                    const allTransactions = transactionsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
                     const filteredTransactions = allTransactions.filter(t => 
                         t.date.toDate().getMonth() === selectedMonth && t.date.toDate().getFullYear() === selectedYear
                     );
                     updateUI(filteredTransactions);
+
+                    // Luego, dentro de la misma función, obtenemos los presupuestos para el mismo mes
+                    // Esto garantiza que siempre tengamos las transacciones correctas al calcular el presupuesto
+                    db.collection("users").doc(currentUser.uid).collection("budgets")
+                        .where('year', '==', selectedYear)
+                        .where('month', '==', selectedMonth)
+                        .onSnapshot(budgetsSnapshot => {
+                            const filteredBudgets = budgetsSnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                            updateBudgetsUI(filteredBudgets, filteredTransactions);
+                        }, error => {
+                            console.error("Error al obtener presupuestos:", error);
+                        });
                 }, error => {
                     console.error("Error al obtener transacciones:", error);
                 });
+        }
+        
+        // ESTA FUNCIÓN FUE MODIFICADA PARA SOLUCIONAR EL ERROR DEL PRESUPUESTO
+        function updateBudgetsUI(budgets, transactions) {
+            budgetsUl.innerHTML = '';
+            
+            if (budgets.length === 0) {
+                budgetsUl.innerHTML = '<p style="text-align: center; font-size: 0.9rem; color: #aaa;">No hay presupuestos para este mes.</p>';
+            }
 
-            // Escuchamos los cambios en la colección 'budgets'
-            db.collection("users").doc(currentUser.uid).collection("budgets")
-                .onSnapshot(snapshot => {
-                    const allBudgets = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
-                    const filteredBudgets = allBudgets.filter(b =>
-                        b.month === selectedMonth && b.year === selectedYear
-                    );
-                    updateBudgetsUI(filteredBudgets, allBudgets);
-                }, error => {
-                    console.error("Error al obtener presupuestos:", error);
-                });
+            budgets.forEach(b => {
+                const totalExpensesForCategory = transactions
+                    .filter(t => t.type === 'gasto' && t.category === b.category)
+                    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+                const remaining = b.amount - totalExpensesForCategory;
+                const spentPercentage = (totalExpensesForCategory / b.amount) * 100;
+                const isExceeded = remaining < 0;
+                const progressBarWidth = Math.min(spentPercentage, 100);
+
+                const li = document.createElement('li');
+                li.className = 'budget-item';
+                li.innerHTML = `
+                    <div class="budget-details">
+                        <h5>${b.category}</h5>
+                        <div class="amounts">
+                            <span>Presupuesto: C$${b.amount.toFixed(2)}</span><br>
+                            <span class="remaining">Restante: C$${remaining.toFixed(2)}</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar ${isExceeded ? 'exceeded' : ''}" style="width: ${progressBarWidth}%;"></div>
+                        </div>
+                    </div>
+                    <button class="delete-btn" data-id="${b.id}">🗑️</button>
+                `;
+                budgetsUl.appendChild(li);
+            });
         }
         
         function updateUI(transactions) {
@@ -882,42 +918,6 @@
             totalBalanceSpan.textContent = `${currencySymbol}${(totalIncome - totalExpense).toFixed(2)}`;
 
             updateChart(transactions);
-        }
-        
-        function updateBudgetsUI(budgets, allTransactions) {
-            budgetsUl.innerHTML = '';
-            
-            if (budgets.length === 0) {
-                budgetsUl.innerHTML = '<p style="text-align: center; font-size: 0.9rem; color: #aaa;">No hay presupuestos para este mes.</p>';
-            }
-
-            budgets.forEach(b => {
-                const totalExpensesForCategory = allTransactions
-                    .filter(t => t.type === 'gasto' && t.category === b.category)
-                    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
-
-                const remaining = b.amount - totalExpensesForCategory;
-                const spentPercentage = (totalExpensesForCategory / b.amount) * 100;
-                const isExceeded = remaining < 0;
-                const progressBarWidth = Math.min(spentPercentage, 100);
-
-                const li = document.createElement('li');
-                li.className = 'budget-item';
-                li.innerHTML = `
-                    <div class="budget-details">
-                        <h5>${b.category}</h5>
-                        <div class="amounts">
-                            <span>Presupuesto: C$${b.amount.toFixed(2)}</span><br>
-                            <span class="remaining">Restante: C$${remaining.toFixed(2)}</span>
-                        </div>
-                        <div class="progress-bar-container">
-                            <div class="progress-bar ${isExceeded ? 'exceeded' : ''}" style="width: ${progressBarWidth}%;"></div>
-                        </div>
-                    </div>
-                    <button class="delete-btn" data-id="${b.id}">🗑️</button>
-                `;
-                budgetsUl.appendChild(li);
-            });
         }
         
         function updateChart(transactions) {
@@ -1071,7 +1071,6 @@
                 const month = parseInt(e.target['budget-month-selector'].value);
                 const year = parseInt(e.target['budget-year-selector'].value);
 
-                // No es necesario validar la existencia, Firestore lo maneja
                 // Validación de fecha para el presupuesto
                 const today = new Date();
                 const currentMonth = today.getMonth();
@@ -1166,5 +1165,4 @@
         });
     </script>
 </body>
-
 </html>
