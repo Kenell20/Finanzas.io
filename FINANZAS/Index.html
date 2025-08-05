@@ -1,0 +1,1169 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Finanzas con Firebase</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
+
+        :root {
+            --bg-color: #121212;
+            --card-color: #1e1e1e;
+            --font-color: #e0e0e0;
+            --primary-color: #3f51b5;  /* Azul */
+            --accent-color: #ff9800;   /* Naranja */
+            --input-bg: #333;
+            --border-color: #444;
+            --shadow-color: rgba(0, 0, 0, 0.4);
+            --success-color: #4caf50;  /* Verde */
+            --danger-color: #f44336;   /* Rojo */
+            --info-color: #03a9f4; /* Azul claro */
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--font-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            transition: background-color 0.3s ease;
+        }
+
+        .container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* --- Estilos de Login y Registro --- */
+        .auth-card {
+            background: var(--card-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px var(--shadow-color);
+            width: 90%;
+            max-width: 400px;
+            padding: 3rem;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+            z-index: 10;
+        }
+
+        .auth-card.hidden {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.8);
+            pointer-events: none;
+        }
+
+        .auth-card h2 {
+            text-align: center;
+            margin-bottom: 2rem;
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--font-color);
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 0.8rem 1rem;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--font-color);
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 2px rgba(63, 81, 181, 0.3);
+        }
+
+        .auth-card button {
+            width: 100%;
+            padding: 1rem;
+            background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .auth-card button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(63, 81, 181, 0.4);
+        }
+        
+        .toggle-btn {
+            display: block;
+            margin-top: 1.5rem;
+            text-align: center;
+            color: var(--font-color);
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            color: var(--primary-color);
+        }
+
+        /* Animaciones para el fondo de las tarjetas de login */
+        .auth-card::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            background: linear-gradient(45deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            z-index: -1;
+            filter: blur(50px);
+            opacity: 0.4;
+            animation: pulse-bg 10s infinite alternate;
+        }
+
+        @keyframes pulse-bg {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.1); }
+        }
+
+        /* --- Estilos de la aplicación principal --- */
+        .app-container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s ease;
+            height: auto;
+        }
+
+        .app-container.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .sidebar {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px var(--shadow-color);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .main-content {
+            background-color: var(--card-color);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 5px 20px var(--shadow-color);
+        }
+
+        .user-info {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .user-info h3 {
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .action-card {
+            background-color: var(--input-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .action-card h4 {
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+
+        .action-card .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .action-card select, .action-card input, .action-card button {
+            width: 100%;
+            padding: 0.8rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--input-bg);
+            color: var(--font-color);
+        }
+        
+        .action-card button[type="submit"] {
+            background: linear-gradient(45deg, var(--primary-color), var(--accent-color));
+            color: #fff;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 1rem;
+        }
+        
+        .action-card button[type="submit"]:hover {
+            transform: translateY(-2px);
+        }
+        
+        .select-group {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .select-group select {
+            flex: 1;
+        }
+
+        .summary-card {
+            background-color: var(--input-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+
+        .summary-card h4 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+        }
+
+        .summary-item span:last-child {
+            font-weight: 600;
+        }
+
+        .summary-item.income { color: var(--success-color); }
+        .summary-item.expense { color: var(--danger-color); }
+        .summary-item.balance { font-size: 1.2rem; font-weight: 600; border-top: 1px solid var(--border-color); padding-top: 0.5rem; margin-top: 1rem;}
+        .summary-item.balance span:last-child { color: var(--font-color); }
+
+        .budget-list-card {
+            background-color: var(--input-bg);
+            padding: 1.5rem;
+            border-radius: 12px;
+        }
+        
+        .budget-list-card h4 {
+            color: var(--info-color);
+            margin-bottom: 1rem;
+        }
+
+        .budget-item {
+            background: var(--card-color);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .budget-item .budget-details {
+            flex-grow: 1;
+        }
+        
+        .budget-item h5 {
+            color: var(--info-color);
+            font-weight: 600;
+        }
+
+        .budget-item .amounts {
+            text-align: right;
+            font-size: 0.9rem;
+        }
+
+        .budget-item .remaining {
+            color: var(--font-color);
+        }
+        
+        .budget-item .progress-bar-container {
+            height: 8px;
+            background: var(--border-color);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        
+        .budget-item .progress-bar {
+            height: 100%;
+            background: var(--success-color);
+            transition: width 0.4s ease;
+        }
+        
+        .budget-item .progress-bar.exceeded {
+            background: var(--danger-color);
+        }
+
+        .budget-item .delete-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 1rem;
+            padding: 0.5rem;
+            transition: transform 0.2s;
+        }
+
+        .budget-item .delete-btn:hover {
+            transform: scale(1.2);
+        }
+        
+        .download-pdf-btn, .logout-btn {
+            width: 100%;
+            margin-top: auto;
+            background: var(--accent-color);
+            color: #fff;
+            padding: 0.8rem 2rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s;
+            display: block;
+            text-align: center;
+        }
+        .download-pdf-btn {
+            background: var(--primary-color);
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .logout-btn:hover, .download-pdf-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .stats-section h3 {
+            margin-bottom: 1.5rem;
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        #myChart {
+            background-color: var(--input-bg);
+            border-radius: 12px;
+            padding: 1rem;
+            max-height: 400px;
+        }
+        
+        .transaction-list {
+            margin-top: 2rem;
+        }
+        
+        .transaction-list h4 {
+            margin-bottom: 1rem;
+            color: var(--accent-color);
+        }
+        
+        #transactions-ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+        
+        #transactions-ul::-webkit-scrollbar { width: 8px; }
+        #transactions-ul::-webkit-scrollbar-track { background: var(--card-color); border-radius: 10px; }
+        #transactions-ul::-webkit-scrollbar-thumb { background: var(--primary-color); border-radius: 10px; }
+        #transactions-ul::-webkit-scrollbar-thumb:hover { background: var(--accent-color); }
+        
+        .transaction-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.8rem 1rem;
+            background: var(--input-bg);
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            border-left: 4px solid;
+            transition: transform 0.2s;
+        }
+        
+        .transaction-item:hover {
+            transform: translateX(5px);
+        }
+        
+        .transaction-item.ingreso {
+            border-color: var(--success-color);
+        }
+
+        .transaction-item.gasto {
+            border-color: var(--danger-color);
+        }
+
+        .transaction-item .details {
+            flex-grow: 1;
+        }
+
+        .transaction-item .amount {
+            font-weight: 600;
+            margin-right: 1rem;
+        }
+
+        .transaction-item .delete-btn {
+            background: none;
+            border: none;
+            color: var(--danger-color);
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        
+        /* --- ESTILOS RESPONSIVE --- */
+        @media (max-width: 768px) {
+            body {
+                align-items: flex-start;
+                min-height: 100vh;
+                overflow-y: auto;
+            }
+
+            .container {
+                height: auto;
+                min-height: 100vh;
+            }
+            
+            .auth-card {
+                padding: 2rem;
+            }
+            
+            .app-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+                gap: 1rem;
+            }
+            
+            .sidebar {
+                order: 2;
+                padding: 1rem;
+                gap: 1rem;
+            }
+            
+            .main-content {
+                order: 1;
+                padding: 1rem;
+            }
+            
+            .user-info h3 {
+                font-size: 1.2rem;
+            }
+            
+            .action-card, .summary-card, .budget-list-card {
+                padding: 1rem;
+            }
+
+            .select-group {
+                flex-direction: column;
+                gap: 0;
+            }
+            
+            .select-group select {
+                margin-bottom: 1rem;
+            }
+            
+            #myChart {
+                max-height: 250px;
+                padding: 0.5rem;
+            }
+            
+            .download-pdf-btn, .logout-btn {
+                margin: 0.5rem 0;
+                width: 100%;
+            }
+
+            .transaction-item .details {
+                font-size: 0.9rem;
+            }
+
+            .transaction-item .amount {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="login-card" class="auth-card">
+            <h2>Inicio de Sesión</h2>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login-email">Email</label>
+                    <input type="email" id="login-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="login-password">Contraseña</label>
+                    <input type="password" id="login-password" required>
+                </div>
+                <button type="submit">Iniciar Sesión</button>
+            </form>
+            <p class="toggle-btn" onclick="toggleAuth('register')">¿No tienes cuenta? Regístrate</p>
+        </div>
+
+        <div id="register-card" class="auth-card hidden">
+            <h2>Registro</h2>
+            <form id="register-form">
+                <div class="form-group">
+                    <label for="register-name">Nombre</label>
+                    <input type="text" id="register-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-email">Email</label>
+                    <input type="email" id="register-email" required>
+                </div>
+                <div class="form-group">
+                    <label for="register-password">Contraseña</label>
+                    <input type="password" id="register-password" required>
+                </div>
+                <button type="submit">Registrarse</button>
+            </form>
+            <p class="toggle-btn" onclick="toggleAuth('login')">¿Ya tienes cuenta? Inicia Sesión</p>
+        </div>
+
+        <div id="app-content" class="app-container">
+            <div class="sidebar">
+                <div class="user-info">
+                    <h3>Hola, <span id="current-username"></span>!</h3>
+                    <p>Bienvenido a tu control de finanzas.</p>
+                </div>
+
+                <div class="action-card">
+                    <h4>Agregar Transacción</h4>
+                    <form id="transaction-form">
+                        <input type="text" id="transaction-description" placeholder="Descripción" required>
+                        <input type="number" id="transaction-amount" placeholder="Cantidad" required>
+                        <select id="transaction-type">
+                            <option value="ingreso">Ingreso</option>
+                            <option value="gasto">Gasto</option>
+                        </select>
+                        <select id="transaction-category"></select>
+                        <div class="select-group">
+                            <select id="transaction-currency">
+                                <option value="C$">Córdoba (C$)</option>
+                                <option value="$">Dólar ($)</option>
+                            </select>
+                        </div>
+                        <input type="date" id="transaction-date" required disabled>
+                        <button type="submit">Guardar</button>
+                    </form>
+                </div>
+
+                <div class="action-card">
+                    <h4>Añadir Presupuesto</h4>
+                    <form id="budget-form">
+                        <input type="number" id="budget-amount" placeholder="Monto del Presupuesto" required>
+                        <div class="select-group">
+                            <select id="budget-category"></select>
+                        </div>
+                        <div class="select-group">
+                            <select id="budget-month-selector"></select>
+                            <select id="budget-year-selector"></select>
+                        </div>
+                        <button type="submit">Crear Presupuesto</button>
+                    </form>
+                </div>
+
+                <div class="budget-list-card">
+                    <h4>Presupuestos del Mes</h4>
+                    <ul id="budgets-ul">
+                        </ul>
+                </div>
+
+                <div class="summary-card">
+                    <h4>Resumen Actual</h4>
+                    <div class="summary-item income">
+                        <span>Ingresos:</span>
+                        <span id="total-income">C$0.00</span>
+                    </div>
+                    <div class="summary-item expense">
+                        <span>Gastos:</span>
+                        <span id="total-expense">C$0.00</span>
+                    </div>
+                    <div class="summary-item balance">
+                        <span>Saldo Total:</span>
+                        <span id="total-balance">C$0.00</span>
+                    </div>
+                </div>
+                
+                <button id="download-pdf-btn" class="download-pdf-btn">Descargar PDF del Mes</button>
+                <button id="logout-btn" class="logout-btn">Cerrar Sesión</button>
+            </div>
+
+            <div class="main-content">
+                <div class="stats-section">
+                    <h3>Estadísticas del Mes (<span id="current-month-year"></span>)</h3>
+                    <canvas id="myChart"></canvas>
+                </div>
+                
+                <div id="transactions-container" class="transaction-list">
+                    <h4>Historial de Transacciones</h4>
+                    <ul id="transactions-ul">
+                        </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <script>
+        // PEGA AQUÍ TU OBJETO DE CONFIGURACIÓN DE FIREBASE
+                const firebaseConfig = {
+            apiKey: "AIzaSyD1UohuK1B7APRJjJufd6kMPfRD4zJQTWg",
+            authDomain: "finanzas2025-3f0e5.firebaseapp.com",
+            projectId: "finanzas2025-3f0e5",
+            storageBucket: "finanzas2025-3f0e5.firebasestorage.app",
+            messagingSenderId: "718202265423",
+            appId: "1:718202265423:web:f2ed415c20376febdb6f3a",
+            measurementId: "G-RFJ06KHEGT"
+            };
+
+        // Inicializa Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Referencias del DOM
+        const loginCard = document.getElementById('login-card');
+        const registerCard = document.getElementById('register-card');
+        const appContent = document.getElementById('app-content');
+        
+        const loginForm = document.getElementById('login-form');
+        const registerForm = document.getElementById('register-form');
+        const transactionForm = document.getElementById('transaction-form');
+        const budgetForm = document.getElementById('budget-form');
+        
+        const transactionDateInput = document.getElementById('transaction-date');
+        const transactionTypeSelect = document.getElementById('transaction-type');
+        const transactionCategorySelect = document.getElementById('transaction-category');
+        const budgetCategorySelect = document.getElementById('budget-category');
+        
+        const budgetMonthSelector = document.getElementById('budget-month-selector');
+        const budgetYearSelector = document.getElementById('budget-year-selector');
+
+        const currentUsernameSpan = document.getElementById('current-username');
+        const totalIncomeSpan = document.getElementById('total-income');
+        const totalExpenseSpan = document.getElementById('total-expense');
+        const totalBalanceSpan = document.getElementById('total-balance');
+        const transactionsUl = document.getElementById('transactions-ul');
+        const budgetsUl = document.getElementById('budgets-ul');
+        const logoutBtn = document.getElementById('logout-btn');
+        const downloadPdfBtn = document.getElementById('download-pdf-btn');
+        const currentMonthYearSpan = document.getElementById('current-month-year');
+        const transactionCurrencySelect = document.getElementById('transaction-currency');
+
+        let myChart;
+        let currentUser = null;
+        const months = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+
+        const categories = {
+            ingreso: ['Salario', 'Ventas', 'Inversiones', 'Regalo', 'Otro'],
+            gasto: ['Alimentos', 'Transporte', 'Servicios', 'Ocio', 'Salud', 'Hogar', 'Otro']
+        };
+
+        // --- Funciones de Configuración Inicial (ahora con Firebase) ---
+
+        function setupDateAndSelectors() {
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = today.getMonth();
+
+            const todayISO = today.toISOString().split('T')[0];
+            transactionDateInput.value = todayISO;
+            transactionDateInput.setAttribute('max', todayISO);
+            transactionDateInput.setAttribute('min', todayISO);
+
+            const startYear = 2020;
+            budgetYearSelector.innerHTML = '';
+            for (let i = year + 1; i >= startYear; i--) {
+                const option = document.createElement('option');
+                option.value = i;
+                option.textContent = i;
+                budgetYearSelector.appendChild(option);
+            }
+
+            budgetMonthSelector.innerHTML = '';
+            months.forEach((monthName, index) => {
+                const option = document.createElement('option');
+                option.value = index;
+                option.textContent = monthName;
+                
+                const budgetOption = option.cloneNode(true);
+                if (index < month && year === today.getFullYear()) {
+                    budgetOption.disabled = true;
+                }
+                budgetMonthSelector.appendChild(budgetOption);
+            });
+            
+            budgetMonthSelector.value = month;
+            budgetYearSelector.value = year;
+
+            budgetMonthSelector.addEventListener('change', loadData);
+            budgetYearSelector.addEventListener('change', () => {
+                const selectedYear = parseInt(budgetYearSelector.value);
+                budgetMonthSelector.querySelectorAll('option').forEach((option, index) => {
+                    const today = new Date();
+                    const currentMonth = today.getMonth();
+                    const currentYear = today.getFullYear();
+
+                    if (selectedYear === currentYear && index < currentMonth) {
+                        option.disabled = true;
+                    } else {
+                        option.disabled = false;
+                    }
+                });
+                loadData();
+            });
+        }
+        
+        function setupCategorySelectors() {
+            function updateCategories(selectElement, type) {
+                selectElement.innerHTML = '';
+                categories[type].forEach(category => {
+                    const option = document.createElement('option');
+                    option.value = category;
+                    option.textContent = category;
+                    selectElement.appendChild(option);
+                });
+            }
+
+            updateCategories(transactionCategorySelect, transactionTypeSelect.value);
+            updateCategories(budgetCategorySelect, 'gasto');
+            transactionTypeSelect.addEventListener('change', (e) => {
+                updateCategories(transactionCategorySelect, e.target.value);
+            });
+        }
+
+        function toggleAuth(type) {
+            if (type === 'login') {
+                loginCard.classList.remove('hidden');
+                registerCard.classList.add('hidden');
+            } else {
+                loginCard.classList.add('hidden');
+                registerCard.classList.remove('hidden');
+            }
+        }
+        
+        function showApp(user) {
+            loginCard.classList.add('hidden');
+            registerCard.classList.add('hidden');
+            appContent.classList.add('visible');
+            currentUsernameSpan.textContent = user.email; // Mostramos el email del usuario
+            
+            setupDateAndSelectors();
+            setupCategorySelectors();
+            loadData();
+        }
+
+        function showAuth() {
+            appContent.classList.remove('visible');
+            loginCard.classList.remove('hidden');
+            registerCard.classList.add('hidden');
+            if (myChart) {
+                myChart.destroy();
+            }
+        }
+
+        // --- Funciones de Carga y Actualización (ahora con Firestore) ---
+
+        // Esta función ahora usa onSnapshot para escuchar cambios en tiempo real
+        function loadData() {
+            if (!currentUser) return;
+
+            const selectedMonth = parseInt(budgetMonthSelector.value);
+            const selectedYear = parseInt(budgetYearSelector.value);
+            
+            const startOfMonth = new Date(selectedYear, selectedMonth, 1);
+            const endOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999);
+            
+            currentMonthYearSpan.textContent = `${months[selectedMonth]} ${selectedYear}`;
+
+            // Escuchamos los cambios en la colección 'transactions' del usuario actual
+            // El filtro se hace del lado del cliente por simplicidad, pero lo ideal es usar un índice
+            db.collection("users").doc(currentUser.uid).collection("transactions")
+                .orderBy("date", "desc")
+                .onSnapshot(snapshot => {
+                    const allTransactions = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                    const filteredTransactions = allTransactions.filter(t => 
+                        t.date.toDate().getMonth() === selectedMonth && t.date.toDate().getFullYear() === selectedYear
+                    );
+                    updateUI(filteredTransactions);
+                }, error => {
+                    console.error("Error al obtener transacciones:", error);
+                });
+
+            // Escuchamos los cambios en la colección 'budgets'
+            db.collection("users").doc(currentUser.uid).collection("budgets")
+                .onSnapshot(snapshot => {
+                    const allBudgets = snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+                    const filteredBudgets = allBudgets.filter(b =>
+                        b.month === selectedMonth && b.year === selectedYear
+                    );
+                    updateBudgetsUI(filteredBudgets, allBudgets);
+                }, error => {
+                    console.error("Error al obtener presupuestos:", error);
+                });
+        }
+        
+        function updateUI(transactions) {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            
+            transactionsUl.innerHTML = '';
+            
+            transactions.forEach(t => {
+                const amount = parseFloat(t.amount);
+                if (t.type === 'ingreso') {
+                    totalIncome += amount;
+                } else {
+                    totalExpense += amount;
+                }
+                
+                const li = document.createElement('li');
+                li.className = `transaction-item ${t.type}`;
+                li.innerHTML = `
+                    <div class="details">
+                        <span>${t.description}</span><br>
+                        <small>${t.currency}${amount.toFixed(2)} - ${t.category}</small>
+                    </div>
+                    <div class="amount">${t.type === 'gasto' ? '-' : '+'}${t.currency}${amount.toFixed(2)}</div>
+                    <button class="delete-btn" data-id="${t.id}">🗑️</button>
+                `;
+                transactionsUl.appendChild(li);
+            });
+            
+            const currencySymbol = transactionCurrencySelect.value;
+            totalIncomeSpan.textContent = `${currencySymbol}${totalIncome.toFixed(2)}`;
+            totalExpenseSpan.textContent = `${currencySymbol}${totalExpense.toFixed(2)}`;
+            totalBalanceSpan.textContent = `${currencySymbol}${(totalIncome - totalExpense).toFixed(2)}`;
+
+            updateChart(transactions);
+        }
+        
+        function updateBudgetsUI(budgets, allTransactions) {
+            budgetsUl.innerHTML = '';
+            
+            if (budgets.length === 0) {
+                budgetsUl.innerHTML = '<p style="text-align: center; font-size: 0.9rem; color: #aaa;">No hay presupuestos para este mes.</p>';
+            }
+
+            budgets.forEach(b => {
+                const totalExpensesForCategory = allTransactions
+                    .filter(t => t.type === 'gasto' && t.category === b.category)
+                    .reduce((sum, t) => sum + parseFloat(t.amount), 0);
+
+                const remaining = b.amount - totalExpensesForCategory;
+                const spentPercentage = (totalExpensesForCategory / b.amount) * 100;
+                const isExceeded = remaining < 0;
+                const progressBarWidth = Math.min(spentPercentage, 100);
+
+                const li = document.createElement('li');
+                li.className = 'budget-item';
+                li.innerHTML = `
+                    <div class="budget-details">
+                        <h5>${b.category}</h5>
+                        <div class="amounts">
+                            <span>Presupuesto: C$${b.amount.toFixed(2)}</span><br>
+                            <span class="remaining">Restante: C$${remaining.toFixed(2)}</span>
+                        </div>
+                        <div class="progress-bar-container">
+                            <div class="progress-bar ${isExceeded ? 'exceeded' : ''}" style="width: ${progressBarWidth}%;"></div>
+                        </div>
+                    </div>
+                    <button class="delete-btn" data-id="${b.id}">🗑️</button>
+                `;
+                budgetsUl.appendChild(li);
+            });
+        }
+        
+        function updateChart(transactions) {
+            const incomeData = transactions.filter(t => t.type === 'ingreso').map(t => parseFloat(t.amount));
+            const expenseData = transactions.filter(t => t.type === 'gasto').map(t => parseFloat(t.amount));
+            
+            const incomeSum = incomeData.reduce((sum, amount) => sum + amount, 0);
+            const expenseSum = expenseData.reduce((sum, amount) => sum + amount, 0);
+            
+            const data = {
+                labels: ['Ingresos', 'Gastos'],
+                datasets: [{
+                    label: 'Resumen Financiero',
+                    data: [incomeSum, expenseSum],
+                    backgroundColor: [
+                        'var(--success-color)',
+                        'var(--danger-color)'
+                    ],
+                    hoverOffset: 4
+                }]
+            };
+
+            const config = {
+                type: 'doughnut',
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#fff' 
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'var(--input-bg)',
+                            bodyColor: '#fff', 
+                            titleColor: '#fff'  
+                        }
+                    }
+                }
+            };
+            
+            const ctx = document.getElementById('myChart').getContext('2d');
+            if (myChart) {
+                myChart.destroy();
+            }
+            myChart = new Chart(ctx, config);
+        }
+
+        // --- Funciones de Generación de PDF ---
+
+        downloadPdfBtn.addEventListener('click', async () => {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const pageHeight = doc.internal.pageSize.getHeight();
+            let y = 10;
+            const margin = 10;
+            const elementWidth = pageWidth - 2 * margin;
+
+            doc.setFontSize(20);
+            doc.setTextColor(63, 81, 181);
+            doc.text('Reporte de Finanzas', pageWidth / 2, y, { align: 'center' });
+            y += 10;
+            doc.setFontSize(14);
+            doc.setTextColor(255, 152, 0);
+            doc.text(`Mes: ${currentMonthYearSpan.textContent}`, pageWidth / 2, y, { align: 'center' });
+            y += 20;
+
+            const chartCanvas = document.getElementById('myChart');
+            const chartImage = chartCanvas.toDataURL('image/png');
+            const chartHeight = (chartCanvas.height * elementWidth) / chartCanvas.width;
+            doc.addImage(chartImage, 'PNG', margin, y, elementWidth, chartHeight);
+            y += chartHeight + 20;
+
+            doc.setFontSize(16);
+            doc.setTextColor(255, 152, 0);
+            doc.text('Historial de Transacciones', margin, y);
+            y += 10;
+            
+            const transactionsUl = document.getElementById('transactions-ul');
+            const originalMaxHeight = transactionsUl.style.maxHeight;
+            const originalOverflow = transactionsUl.style.overflowY;
+            transactionsUl.style.maxHeight = 'none';
+            transactionsUl.style.overflowY = 'visible';
+
+            const transactionsContainer = document.getElementById('transactions-container');
+            const transactionCanvas = await html2canvas(transactionsContainer);
+            const transactionImage = transactionCanvas.toDataURL('image/png');
+            const transactionHeight = (transactionCanvas.height * elementWidth) / transactionCanvas.width;
+            
+            transactionsUl.style.maxHeight = originalMaxHeight;
+            transactionsUl.style.overflowY = originalOverflow;
+            
+            let currentY = y;
+            let imgHeight = transactionHeight;
+            let imgWidth = elementWidth;
+            let pageY = 0;
+            const imgPerPage = (pageHeight - currentY - margin) * transactionCanvas.width / imgWidth;
+            
+            while (imgHeight > 0) {
+                const heightToDraw = Math.min(imgHeight, imgPerPage);
+                doc.addImage(transactionImage, 'PNG', margin, currentY, imgWidth, heightToDraw, null, null, 0, pageY * (transactionCanvas.width / imgWidth));
+                imgHeight -= heightToDraw;
+                pageY += heightToDraw;
+
+                if (imgHeight > 0) {
+                    doc.addPage();
+                    currentY = margin;
+                }
+            }
+            doc.save(`reporte-finanzas-${currentMonthYearSpan.textContent}.pdf`);
+        });
+
+        // --- Manejadores de Eventos (ahora usan Firebase) ---
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = e.target['login-email'].value;
+            const password = e.target['login-password'].value;
+            auth.signInWithEmailAndPassword(email, password).catch(error => {
+                alert('Error al iniciar sesión: ' + error.message);
+            });
+        });
+
+        registerForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const name = e.target['register-name'].value;
+            const email = e.target['register-email'].value;
+            const password = e.target['register-password'].value;
+            auth.createUserWithEmailAndPassword(email, password)
+                .then((userCredential) => {
+                    // Actualizar el nombre del usuario
+                    userCredential.user.updateProfile({
+                        displayName: name
+                    });
+                    alert(`Registro exitoso para ${name}. Se ha iniciado sesión.`);
+                })
+                .catch(error => {
+                    alert('Error al registrar: ' + error.message);
+                });
+        });
+        
+        budgetForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+            try {
+                const amount = parseFloat(e.target['budget-amount'].value);
+                const category = e.target['budget-category'].value;
+                const month = parseInt(e.target['budget-month-selector'].value);
+                const year = parseInt(e.target['budget-year-selector'].value);
+
+                // No es necesario validar la existencia, Firestore lo maneja
+                // Validación de fecha para el presupuesto
+                const today = new Date();
+                const currentMonth = today.getMonth();
+                const currentYear = today.getFullYear();
+                if (year < currentYear || (year === currentYear && month < currentMonth)) {
+                    alert('No se puede crear un presupuesto para un mes anterior al actual.');
+                    return;
+                }
+
+                if (amount && category) {
+                    await db.collection("users").doc(currentUser.uid).collection("budgets").add({
+                        amount,
+                        category,
+                        month,
+                        year,
+                        userId: currentUser.uid
+                    });
+                    e.target.reset();
+                    alert('Presupuesto creado con éxito.');
+                }
+            } catch (error) {
+                console.error("Error al crear presupuesto:", error);
+                alert("Hubo un error al crear el presupuesto.");
+            }
+        });
+
+        transactionForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!currentUser) return;
+            try {
+                const description = e.target['transaction-description'].value;
+                const amount = parseFloat(e.target['transaction-amount'].value);
+                const type = e.target['transaction-type'].value;
+                const category = e.target['transaction-category'].value;
+                const currency = e.target['transaction-currency'].value;
+                const date = new Date(e.target['transaction-date'].value);
+                
+                if (description && amount) {
+                    await db.collection("users").doc(currentUser.uid).collection("transactions").add({
+                        description,
+                        amount,
+                        type,
+                        category,
+                        currency,
+                        date: firebase.firestore.Timestamp.fromDate(date),
+                        userId: currentUser.uid
+                    });
+                    e.target.reset();
+                    setupDateAndSelectors();
+                }
+            } catch (error) {
+                console.error("Error al crear transacción:", error);
+                alert("Hubo un error al crear la transacción.");
+            }
+        });
+        
+        transactionsUl.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const transactionId = e.target.dataset.id;
+                if (confirm('¿Estás seguro de que quieres eliminar esta transacción?')) {
+                    db.collection("users").doc(currentUser.uid).collection("transactions").doc(transactionId).delete().catch(error => {
+                        console.error("Error al eliminar transacción:", error);
+                    });
+                }
+            }
+        });
+
+        budgetsUl.addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-btn')) {
+                const budgetId = e.target.dataset.id;
+                if (confirm('¿Estás seguro de que quieres eliminar este presupuesto?')) {
+                    db.collection("users").doc(currentUser.uid).collection("budgets").doc(budgetId).delete().catch(error => {
+                        console.error("Error al eliminar presupuesto:", error);
+                    });
+                }
+            }
+        });
+
+        logoutBtn.addEventListener('click', () => {
+            auth.signOut();
+        });
+        
+        // El manejador de estado de autenticación es la función principal ahora
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                showApp(user);
+            } else {
+                currentUser = null;
+                showAuth();
+            }
+        });
+    </script>
+</body>
+</html>
