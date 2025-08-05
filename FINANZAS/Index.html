@@ -135,7 +135,6 @@
             color: var(--primary-color);
         }
 
-        /* Animaciones para el fondo de las tarjetas de login */
         .auth-card::before {
             content: '';
             position: absolute;
@@ -449,7 +448,28 @@
             font-size: 1rem;
         }
         
-        /* --- ESTILOS RESPONSIVE --- */
+        /* --- ESTILOS RESPONSIVE MEJORADOS --- */
+        /* Para pantallas de tablet y menores */
+        @media (max-width: 992px) {
+            .app-container {
+                grid-template-columns: 1fr;
+                padding: 1rem;
+                gap: 1.5rem;
+            }
+
+            .sidebar {
+                order: 2;
+                padding: 1.5rem;
+                gap: 1.5rem;
+            }
+
+            .main-content {
+                order: 1;
+                padding: 1.5rem;
+            }
+        }
+
+        /* Para pantallas de móvil y menores */
         @media (max-width: 768px) {
             body {
                 align-items: flex-start;
@@ -464,23 +484,6 @@
             
             .auth-card {
                 padding: 2rem;
-            }
-            
-            .app-container {
-                grid-template-columns: 1fr;
-                padding: 1rem;
-                gap: 1rem;
-            }
-            
-            .sidebar {
-                order: 2;
-                padding: 1rem;
-                gap: 1rem;
-            }
-            
-            .main-content {
-                order: 1;
-                padding: 1rem;
             }
             
             .user-info h3 {
@@ -516,6 +519,31 @@
 
             .transaction-item .amount {
                 font-size: 0.9rem;
+            }
+        }
+
+        /* Para pantallas muy pequeñas (menos de 576px) */
+        @media (max-width: 576px) {
+            .auth-card {
+                padding: 1.5rem;
+            }
+
+            .auth-card h2 {
+                font-size: 1.5rem;
+                margin-bottom: 1.5rem;
+            }
+
+            .app-container {
+                padding: 0.5rem;
+                gap: 1rem;
+            }
+
+            .sidebar, .main-content {
+                padding: 1rem;
+            }
+
+            .action-card h4, .summary-card h4, .budget-list-card h4, .stats-section h3 {
+                font-size: 1.1rem;
             }
         }
     </style>
@@ -652,19 +680,22 @@
 
     <script>
         // PEGA AQUÍ TU OBJETO DE CONFIGURACIÓN DE FIREBASE
-                const firebaseConfig = {
-                    apiKey: "AIzaSyD1UohuK1B7APRJjJufd6kMPfRD4zJQTWg",
-                    authDomain: "finanzas2025-3f0e5.firebaseapp.com",
-                    projectId: "finanzas2025-3f0e5",
-                    storageBucket: "finanzas2025-3f0e5.firebasestorage.app",
-                    messagingSenderId: "718202265423",
-                    appId: "1:718202265423:web:f2ed415c20376febdb6f3a",
-                    measurementId: "G-RFJ06KHEGT"
-            };
+        const firebaseConfig = {
+                apiKey: "AIzaSyD1UohuK1B7APRJjJufd6kMPfRD4zJQTWg",
+                authDomain: "finanzas2025-3f0e5.firebaseapp.com",
+                projectId: "finanzas2025-3f0e5",
+                storageBucket: "finanzas2025-3f0e5.firebasestorage.app",
+                messagingSenderId: "718202265423",
+                appId: "1:718202265423:web:f2ed415c20376febdb6f3a",
+                measurementId: "G-RFJ06KHEGT"
+        };
 
         // Inicializa Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
+        // --- LÍNEA AGREGADA PARA CERRAR SESIÓN AL CERRAR EL NAVEGADOR ---
+        firebase.auth().setPersistence(firebase.auth.Auth.Persistence.SESSION);
+
         const db = firebase.firestore();
 
         // Referencias del DOM
@@ -933,8 +964,8 @@
                     label: 'Resumen Financiero',
                     data: [incomeSum, expenseSum],
                     backgroundColor: [
-                        'GREEN',
-                        'RED'
+                        'var(--success-color)',
+                        'var(--danger-color)'
                     ],
                     hoverOffset: 4
                 }]
